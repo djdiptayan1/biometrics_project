@@ -103,6 +103,9 @@ struct SuccessView: View {
         name: "Diptayan Jash",
         confidence: 0.95,
         faceMatch: true,
-        voiceMatch: true
+        voiceMatch: true,
+        face_similarity: 0.92,
+        voice_similarity: 0.90,
+        result: 1
     ))
 }

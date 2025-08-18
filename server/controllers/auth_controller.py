@@ -1,6 +1,7 @@
 from flask import request, jsonify
-import random
-from models.auth_models import BiometricAuthResponse, AuthErrorResponse, FileValidation
+from services.biometric_auth_service import BiometricAuthService
+
+biometric_service = BiometricAuthService()
 
 
 class AuthController:
@@ -27,32 +28,20 @@ class AuthController:
             error_response = AuthErrorResponse(message="Invalid audio file format")
             return jsonify(error_response.dict()), 400
 
-        # TODO: Implement actual biometric authentication logic
-        # For now, simulating authentication with random values
+        # Replace TODO: Implement actual biometric authentication logic
+        result = biometric_service.verify_user(image_file.read(), audio_file.read())
 
-        success = True
-        message = "Authentication successful"
-        confidence = 0.95
-        face_match = True
-        voice_match = True
+        if not result["success"]:
+            return jsonify({
+                "success": False,
+                "error": result.get("error", "Authentication failed"),
+                "authenticated": bool(result.get("authenticated", False)),  # Ensure boolean is JSON serializable
+            }), 400
 
-        if success:
-            auth_response = BiometricAuthResponse(
-                success=success,
-                message=message,
-                name="Diptayan Jash",  # TODO: Get from actual authentication
-                confidence=confidence,
-                faceMatch=face_match,
-                voiceMatch=voice_match,
-            )
-        else:
-            auth_response = BiometricAuthResponse(
-                success=success,
-                message=message,
-                name=None,
-                confidence=confidence,
-                faceMatch=face_match,
-                voiceMatch=voice_match,
-            )
-
-        return jsonify(auth_response.dict()), 200
+        return jsonify({
+            "success": True,
+            "authenticated": bool(result["authenticated"]),  # Ensure boolean is JSON serializable
+            "face_similarity": float(result["face_similarity"]),
+            "voice_similarity": float(result["voice_similarity"]),
+            "result": result["result"]
+        }), 200

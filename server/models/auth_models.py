@@ -8,6 +8,9 @@ class BiometricAuthResponse(BaseModel):
     """Response model for biometric authentication"""
 
     success: bool = Field(..., description="Whether authentication was successful")
+    authenticated: Optional[bool] = Field(
+        None, description="Whether the user was authenticated"
+    )
     message: str = Field(
         ..., description="Human-readable message about the authentication result"
     )
@@ -21,19 +24,67 @@ class BiometricAuthResponse(BaseModel):
     voiceMatch: Optional[bool] = Field(
         None, description="Whether voice biometric matched"
     )
+    face_similarity: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Face similarity score (0.0 to 1.0)"
+    )
+    voice_similarity: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Voice similarity score (0.0 to 1.0)"
+    )
+    result: Optional[int] = Field(
+        None, description="Result flag: 1 for success, 0 for failure"
+    )
+    similarity: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Similarity score for single biometric (face-only)",
+    )
 
     class Config:
         """Pydantic configuration"""
 
-        json_encoders = {float: lambda v: round(v, 2) if v is not None else None}
+        json_encoders = {float: lambda v: round(v, 3) if v is not None else None}
         schema_extra = {
             "example": {
                 "success": True,
+                "authenticated": True,
                 "message": "Authentication successful",
-                "name": "John Doe",
-                "confidence": 0.95,
+                "name": "Palash Shah",
+                "confidence": 0.856,
                 "faceMatch": True,
                 "voiceMatch": True,
+                "face_similarity": 0.872,
+                "voice_similarity": 0.840,
+                "result": 1,
+            }
+        }
+
+
+class FaceOnlyAuthResponse(BaseModel):
+    """Response model for face-only authentication"""
+
+    success: bool = Field(..., description="Whether authentication was successful")
+    authenticated: Optional[bool] = Field(
+        None, description="Whether the user was authenticated"
+    )
+    similarity: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Face similarity score (0.0 to 1.0)"
+    )
+    result: Optional[int] = Field(
+        None, description="Result flag: 1 for success, 0 for failure"
+    )
+    message: Optional[str] = Field(None, description="Optional message")
+
+    class Config:
+        """Pydantic configuration"""
+
+        json_encoders = {float: lambda v: round(v, 3) if v is not None else None}
+        schema_extra = {
+            "example": {
+                "success": True,
+                "authenticated": True,
+                "similarity": 0.872,
+                "result": 1,
             }
         }
 
@@ -42,11 +93,21 @@ class AuthErrorResponse(BaseModel):
     """Error response model for authentication failures"""
 
     success: bool = Field(False, description="Always false for error responses")
-    message: str = Field(..., description="Error message describing what went wrong")
+    error: Optional[str] = Field(
+        None, description="Error message describing what went wrong"
+    )
+    message: Optional[str] = Field(None, description="Alternative error message field")
+    authenticated: Optional[bool] = Field(None, description="Always null for errors")
     name: Optional[str] = Field(None, description="Always null for errors")
     confidence: Optional[float] = Field(None, description="Always null for errors")
     faceMatch: Optional[bool] = Field(None, description="Always null for errors")
     voiceMatch: Optional[bool] = Field(None, description="Always null for errors")
+    face_result: Optional[dict] = Field(
+        None, description="Face verification result details"
+    )
+    voice_result: Optional[dict] = Field(
+        None, description="Voice verification result details"
+    )
 
     class Config:
         """Pydantic configuration"""
@@ -54,7 +115,8 @@ class AuthErrorResponse(BaseModel):
         schema_extra = {
             "example": {
                 "success": False,
-                "message": "Missing image or audio file",
+                "error": "Image or audio data missing",
+                "authenticated": None,
                 "name": None,
                 "confidence": None,
                 "faceMatch": None,
@@ -66,8 +128,10 @@ class AuthErrorResponse(BaseModel):
 class BiometricAuthRequest(BaseModel):
     """Request model for biometric authentication (for documentation purposes)"""
 
-    image: str = Field(..., description="Base64 encoded image or multipart file")
-    audio: str = Field(..., description="Base64 encoded audio or multipart file")
+    image: str = Field(
+        ..., description="Base64 encoded image data or multipart form field"
+    )
+    audio: str = Field(..., description="Audio file as multipart form upload")
     timestamp: Optional[float] = Field(None, description="Request timestamp")
     device_info: Optional[str] = Field(None, description="Device information")
 
@@ -76,8 +140,27 @@ class BiometricAuthRequest(BaseModel):
 
         schema_extra = {
             "example": {
-                "image": "multipart/form-data file",
-                "audio": "multipart/form-data file",
+                "image": "base64 encoded image data or multipart form field",
+                "audio": "multipart/form-data audio file",
+                "timestamp": 1692364800.0,
+                "device_info": "iOS 16.0",
+            }
+        }
+
+
+class FaceAuthRequest(BaseModel):
+    """Request model for face-only authentication"""
+
+    image: str = Field(..., description="Base64 encoded image data")
+    timestamp: Optional[float] = Field(None, description="Request timestamp")
+    device_info: Optional[str] = Field(None, description="Device information")
+
+    class Config:
+        """Pydantic configuration"""
+
+        schema_extra = {
+            "example": {
+                "image": "base64 encoded image data",
                 "timestamp": 1692364800.0,
                 "device_info": "iOS 16.0",
             }
@@ -104,3 +187,16 @@ class FileValidation:
         if not filename:
             return False
         return any(filename.lower().endswith(ext) for ext in cls.VALID_AUDIO_EXTENSIONS)
+
+
+# Health check response models
+class HealthCheckResponse(BaseModel):
+    """Response model for health check endpoints"""
+
+    status: str = Field(..., description="Service status")
+    Name: Optional[str] = Field(None, description="Service name")
+
+    class Config:
+        """Pydantic configuration"""
+
+        schema_extra = {"example": {"Name": "Biometrics Backend", "status": "healthy"}}

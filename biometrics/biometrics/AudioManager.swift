@@ -21,7 +21,7 @@ class AudioManager: NSObject, ObservableObject {
     private var timer: Timer?
     private var recordingSession: AVAudioSession!
     
-    private let maxRecordingTime: Double = 5.0
+    private let maxRecordingTime: Double = 3.0  // Reduced to 3 seconds for smaller files
     
     override init() {
         super.init()
@@ -65,12 +65,23 @@ class AudioManager: NSObject, ObservableObject {
         
         let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.m4a")
         
+        // Delete any existing recording to ensure we start fresh
+        if FileManager.default.fileExists(atPath: audioFilename.path) {
+            do {
+                try FileManager.default.removeItem(at: audioFilename)
+                print("Deleted existing recording")
+            } catch {
+                print("Could not delete existing recording: \(error)")
+            }
+        }
+        
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 12000,
+            AVSampleRateKey: 16000,  // Lower sample rate for voice (sufficient quality)
             AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
+            AVEncoderBitRateKey: 24000,  // Very low bitrate for small files
+            AVEncoderAudioQualityKey: AVAudioQuality.low.rawValue  // Low quality for smallest size
+        ] as [String : Any]
         
         do {
             audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
@@ -106,6 +117,12 @@ class AudioManager: NSObject, ObservableObject {
     
     func playRecording() {
         let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.m4a")
+        
+        // Check if the recording file exists
+        guard FileManager.default.fileExists(atPath: audioFilename.path) else {
+            print("No recording file found at: \(audioFilename.path)")
+            return
+        }
         
         // Ensure audio plays through speaker
         do {

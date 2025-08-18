@@ -108,7 +108,7 @@ struct BiometricCaptureView: View {
                         }
                         
                         // Timer display
-                        Text(String(format: "%.1f / 5.0 seconds", audioManager.recordingTime))
+                        Text(String(format: "%.1f / 3.0 seconds", audioManager.recordingTime))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
@@ -244,7 +244,10 @@ struct BiometricCaptureView: View {
                             name: nil,
                             confidence: nil,
                             faceMatch: nil,
-                            voiceMatch: nil
+                            voiceMatch: nil,
+                            face_similarity: nil,
+                            voice_similarity: nil,
+                            result: nil
                         )
                         onAuthenticationComplete(errorResult)
                         presentationMode.wrappedValue.dismiss()
