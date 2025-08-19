@@ -6,7 +6,7 @@ class BiometricAuthService:
         self.face_service = FaceAuthService()
         self.voice_service = VoiceAuthService()
 
-    def verify_user(self, image_data, audio_data, face_threshold=0.7, voice_threshold=0.7):
+    def verify_user(self, image_data, audio_data, face_threshold=0.7, voice_threshold=0.5):  # Lowered voice threshold
         face_result = self.face_service.verify_user(image_data, threshold=face_threshold)
         voice_result = self.voice_service.verify_user(audio_data, threshold=voice_threshold)
 

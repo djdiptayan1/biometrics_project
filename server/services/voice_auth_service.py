@@ -23,8 +23,9 @@ class VoiceAuthService:
 
     def get_embedding_from_audio(self, audio_data):
         try:
-            # Save audio data to a temporary file
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            # Save audio data to a temporary file with appropriate extension
+            # Librosa can handle m4a files, so we'll use .m4a extension
+            with tempfile.NamedTemporaryFile(suffix=".m4a", delete=False) as temp_file:
                 temp_file.write(audio_data)
                 temp_file_path = temp_file.name
 
@@ -47,7 +48,7 @@ class VoiceAuthService:
             print(f"Error processing audio: {e}")
             return None
 
-    def verify_user(self, audio_data, threshold=0.7):
+    def verify_user(self, audio_data, threshold=0.5):  # Lowered from 0.7 to 0.5
         try:
             embedding = self.get_embedding_from_audio(audio_data)
 

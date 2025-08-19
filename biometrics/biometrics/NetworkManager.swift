@@ -58,7 +58,7 @@ class NetworkManager: ObservableObject {
     @Published var errorMessage: String?
     
     // Configure your API endpoint here
-    private var baseURL = "http://192.168.1.5:3000"
+    private var baseURL = "http://10.9.236.198:3000"
     private let authEndpoint = "/biometric/authenticate"
     
     private let session: URLSession

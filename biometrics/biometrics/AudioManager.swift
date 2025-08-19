@@ -21,7 +21,7 @@ class AudioManager: NSObject, ObservableObject {
     private var timer: Timer?
     private var recordingSession: AVAudioSession!
     
-    private let maxRecordingTime: Double = 3.0  // Reduced to 3 seconds for smaller files
+    private let maxRecordingTime: Double = 5.0  // Back to 5 seconds for better voice recognition
     
     override init() {
         super.init()
@@ -77,10 +77,10 @@ class AudioManager: NSObject, ObservableObject {
         
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 16000,  // Lower sample rate for voice (sufficient quality)
+            AVSampleRateKey: 16000,  // Keep 16kHz as expected by the voice service
             AVNumberOfChannelsKey: 1,
-            AVEncoderBitRateKey: 24000,  // Very low bitrate for small files
-            AVEncoderAudioQualityKey: AVAudioQuality.low.rawValue  // Low quality for smallest size
+            AVEncoderBitRateKey: 48000,  // Increase bitrate for better quality
+            AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue  // Medium quality for balance
         ] as [String : Any]
         
         do {

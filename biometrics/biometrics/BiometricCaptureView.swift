@@ -108,7 +108,7 @@ struct BiometricCaptureView: View {
                         }
                         
                         // Timer display
-                        Text(String(format: "%.1f / 3.0 seconds", audioManager.recordingTime))
+                        Text(String(format: "%.1f / 5.0 seconds", audioManager.recordingTime))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
