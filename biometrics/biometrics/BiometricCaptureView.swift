@@ -181,7 +181,7 @@ struct BiometricCaptureView: View {
                 // Unlock Button
                 Button(action: {
                     if let image = capturedImage, audioManager.hasRecording {
-                        let audioURL = getDocumentsDirectory().appendingPathComponent("voice_recording.m4a")
+                        let audioURL = getDocumentsDirectory().appendingPathComponent("voice_recording.wav")
                         networkManager.authenticateBiometricsAsync(image: image, audioURL: audioURL)
                     }
                 }) {
@@ -239,15 +239,10 @@ struct BiometricCaptureView: View {
                     } else if let error = networkManager.errorMessage {
                         // Create a failed auth result for error cases
                         let errorResult = BiometricAuthResponse(
-                            success: false,
-                            message: error,
-                            name: nil,
-                            confidence: nil,
-                            faceMatch: nil,
-                            voiceMatch: nil,
-                            face_similarity: nil,
-                            voice_similarity: nil,
-                            result: nil
+                            image: nil,
+                            audio: nil,
+                            result: AuthenticationResult(authenticated: false, name: nil),
+                            errors: ["general": AnyCodable(error)]
                         )
                         onAuthenticationComplete(errorResult)
                         presentationMode.wrappedValue.dismiss()

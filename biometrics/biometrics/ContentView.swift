@@ -13,24 +13,33 @@ struct ContentView: View {
     @State private var showingSuccessView = false
     @State private var authResult: BiometricAuthResponse?
     @State private var authMessage: String = ""
-    @State private var showingAuthMessage = false
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 30) {
-                Text("Biometric Authentication")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+            VStack(spacing: 32) {
+                Spacer()
                 
-                Image(systemName: "faceid")
-                    .font(.system(size: 80))
-                    .foregroundColor(.blue)
+                VStack(spacing: 12) {
+                    Text("Biometric Authentication")
+                        .font(.system(.largeTitle, design: .rounded))
+                        .fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                    
+                    Image(systemName: "faceid")
+                        .font(.system(size: 80, weight: .regular))
+                        .foregroundColor(.primary)
+                        .padding(.top, 8)
+                    
+                    Text("Secure access with face and voice recognition")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
                 
-                Text("Secure access with face and voice recognition")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                Spacer()
                 
+                // Start button
                 Button(action: {
                     showingBiometricCapture = true
                 }) {
@@ -39,23 +48,32 @@ struct ContentView: View {
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
-                        .cornerRadius(10)
+                        .background(Color.accentColor)
+                        .cornerRadius(12)
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 32)
                 
+                // Auth message card
                 if !authMessage.isEmpty {
-                    Text(authMessage)
-                        .font(.body)
-                        .foregroundColor(authResult?.success == true ? .green : .red)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                        .background(Color.gray.opacity(0.1))
-                        .cornerRadius(8)
-                        .padding(.horizontal)
+                    VStack {
+                        Text(authMessage)
+                            .font(.body)
+                            .foregroundColor(authResult?.success == true ? .green : .red)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 24)
+                    .transition(.opacity.combined(with: .scale))
+                    .animation(.easeInOut, value: authMessage)
                 }
+                
+                Spacer()
             }
-            .navigationTitle("Biometrics")
+            .padding()
+            .navigationBarHidden(true)
             .sheet(isPresented: $showingBiometricCapture) {
                 BiometricCaptureView { result in
                     handleAuthenticationResult(result)
@@ -64,6 +82,7 @@ struct ContentView: View {
             .fullScreenCover(isPresented: $showingSuccessView) {
                 if let result = authResult {
                     SuccessView(authResult: result)
+                        .transition(.opacity)
                 }
             }
         }
@@ -73,7 +92,6 @@ struct ContentView: View {
         authResult = result
         
         if result.success {
-            // Both face and voice matched
             let welcomeMessage = if let name = result.name {
                 "✅ Authentication Successful!\nWelcome back, \(name)!"
             } else {
@@ -82,23 +100,22 @@ struct ContentView: View {
             authMessage = welcomeMessage
             showingSuccessView = true
         } else {
-            // Handle different failure scenarios
             let faceMatch = result.faceMatch ?? false
             let voiceMatch = result.voiceMatch ?? false
             
             if faceMatch && !voiceMatch {
-                authMessage = "❌ Authentication Failed\n\n✓ Face verified\n✗ Voice did not match\n\nPlease try again with clearer voice recording."
+                authMessage = "❌ Authentication Failed\n\n✓ Face verified\n✗ Voice did not match\n\nTry again with clearer voice recording."
             } else if !faceMatch && voiceMatch {
-                authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✓ Voice verified\n\nPlease ensure proper lighting and face positioning."
+                authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✓ Voice verified\n\nEnsure proper lighting and face positioning."
             } else if !faceMatch && !voiceMatch {
-                authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✗ Voice did not match\n\nPlease try again with both face and voice."
+                authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✗ Voice did not match\n\nPlease try again."
             } else {
                 authMessage = "❌ Authentication Failed\n\n\(result.message)"
             }
             showingSuccessView = false
         }
-        }
     }
+}
 
 #Preview {
     ContentView()

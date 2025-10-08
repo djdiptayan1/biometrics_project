@@ -15,6 +15,10 @@ const upload = multer({ dest: 'uploads/' });
 app.use('/image', imageRoutes);
 app.use('/audio', audioRoutes);
 
+
+// Import authenticate utility
+const { authenticate } = require('./utils/authenticate');
+
 // Multimodal endpoint: accepts both image and audio
 app.post('/predict', upload.fields([
     { name: 'image', maxCount: 1 },
@@ -23,6 +27,7 @@ app.post('/predict', upload.fields([
     let imageResult = null;
     let audioResult = null;
     let errors = {};
+
     // Predict image if present
     if (req.files && req.files.image) {
         try {
@@ -51,10 +56,13 @@ app.post('/predict', upload.fields([
             errors.audio = e.message || e;
         }
     }
+    const result = authenticate(imageResult, audioResult);
+
     // Combine results
     res.json({
         image: imageResult,
         audio: audioResult,
+        result,
         errors: Object.keys(errors).length ? errors : undefined
     });
 });

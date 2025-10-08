@@ -32,11 +32,12 @@ exports.predictAudio = async (req, res) => {
         let audioPath = req.file.path;
         console.log('[AudioModel] Step 4: Received audio file:', audioPath);
 
-        // If file is mp3, convert to wav
+        // If file is mp3 or m4a, convert to wav
         let wavPath = audioPath;
-        if (req.file.mimetype === 'audio/mpeg' || req.file.originalname.endsWith('.mp3')) {
+        if (req.file.mimetype === 'audio/mpeg' || req.file.originalname.endsWith('.mp3') ||
+            req.file.mimetype === 'audio/mp4' || req.file.originalname.endsWith('.m4a')) {
             wavPath = audioPath + '.wav';
-            console.log('[AudioModel] Step 5: Converting MP3 to WAV...');
+            console.log('[AudioModel] Step 5: Converting audio file to WAV...');
             await new Promise((resolve, reject) => {
                 ffmpeg(audioPath)
                     .toFormat('wav')

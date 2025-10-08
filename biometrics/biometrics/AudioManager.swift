@@ -63,7 +63,7 @@ class AudioManager: NSObject, ObservableObject {
     func startRecording() {
         guard !isRecording else { return }
         
-        let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.m4a")
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.wav")
         
         // Delete any existing recording to ensure we start fresh
         if FileManager.default.fileExists(atPath: audioFilename.path) {
@@ -76,11 +76,13 @@ class AudioManager: NSObject, ObservableObject {
         }
         
         let settings = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 16000,  // Keep 16kHz as expected by the voice service
-            AVNumberOfChannelsKey: 1,
-            AVEncoderBitRateKey: 48000,  // Increase bitrate for better quality
-            AVEncoderAudioQualityKey: AVAudioQuality.medium.rawValue  // Medium quality for balance
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),  // WAV format
+            AVSampleRateKey: 16000,  // 16kHz as expected by the voice service
+            AVNumberOfChannelsKey: 1,  // Mono
+            AVLinearPCMBitDepthKey: 16,  // 16-bit depth
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ] as [String : Any]
         
         do {
@@ -116,7 +118,7 @@ class AudioManager: NSObject, ObservableObject {
     }
     
     func playRecording() {
-        let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.m4a")
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.wav")
         
         // Check if the recording file exists
         guard FileManager.default.fileExists(atPath: audioFilename.path) else {
@@ -152,7 +154,7 @@ class AudioManager: NSObject, ObservableObject {
     }
     
     func deleteRecording() {
-        let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.m4a")
+        let audioFilename = getDocumentsDirectory().appendingPathComponent("voice_recording.wav")
         
         do {
             try FileManager.default.removeItem(at: audioFilename)

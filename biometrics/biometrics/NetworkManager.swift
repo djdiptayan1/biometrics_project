@@ -8,22 +8,98 @@
 import SwiftUI
 import Foundation
 import Combine
+import AVFoundation
 
 struct BiometricAuthRequest {
     let image: UIImage
     let audioURL: URL
 }
 
-struct BiometricAuthResponse: Codable, Equatable {
-    let success: Bool
-    let message: String
+// Helper for flexible JSON decoding
+struct AnyCodable: Codable, Equatable {
+    let value: Any
+    
+    init(_ value: Any) {
+        self.value = value
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let string = try? container.decode(String.self) {
+            value = string
+        } else if let dict = try? container.decode([String: AnyCodable].self) {
+            value = dict
+        } else if let array = try? container.decode([AnyCodable].self) {
+            value = array
+        } else {
+            value = NSNull()
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        if let string = value as? String {
+            try container.encode(string)
+        } else if let dict = value as? [String: AnyCodable] {
+            try container.encode(dict)
+        } else if let array = value as? [AnyCodable] {
+            try container.encode(array)
+        }
+    }
+    
+    static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+        return true // Simplified equality for this use case
+    }
+}
+
+// New response models to match server format
+struct PredictionResult: Codable, Equatable {
+    let className: String
+    let probability: Double
+}
+
+struct BiometricPrediction: Codable, Equatable {
+    let results: [PredictionResult]
+}
+
+struct AuthenticationResult: Codable, Equatable {
+    let authenticated: Bool
     let name: String?
-    let confidence: Double?
-    let faceMatch: Bool?
-    let voiceMatch: Bool?
-    let face_similarity: Double?
-    let voice_similarity: Double?
-    let result: Int?
+}
+
+struct BiometricAuthResponse: Codable, Equatable {
+    let image: BiometricPrediction?
+    let audio: BiometricPrediction?
+    let result: AuthenticationResult
+    let errors: [String: AnyCodable]?
+    
+    // Computed properties for backward compatibility
+    var success: Bool { 
+        return result.authenticated 
+    }
+    
+    var message: String { 
+        return result.authenticated ? "Authentication successful" : "Authentication failed" 
+    }
+    
+    var name: String? { 
+        return result.name 
+    }
+    
+    var confidence: Double? {
+        return image?.results.first?.probability
+    }
+    
+    var faceMatch: Bool? {
+        guard let imageResults = image?.results.first else { return nil }
+        return imageResults.probability > 0.7 // You can adjust this threshold
+    }
+    
+    var voiceMatch: Bool? {
+        guard let audioResults = audio?.results.first(where: { $0.className != "Background Noise" }) else { return nil }
+        return audioResults.probability > 0.3 // You can adjust this threshold
+    }
 }
 
 enum NetworkError: Error, LocalizedError {
@@ -58,8 +134,8 @@ class NetworkManager: ObservableObject {
     @Published var errorMessage: String?
     
     // Configure your API endpoint here
-    private var baseURL = "http://10.9.236.198:3000"
-    private let authEndpoint = "/biometric/authenticate"
+    private var baseURL = "http://10.9.43.222:3000"
+    private let authEndpoint = "/predict"
     
     private let session: URLSession
     
@@ -91,45 +167,37 @@ class NetworkManager: ObservableObject {
         // Create request body
         var body = Data()
         
-        // Add image data as base64 form field with aggressive compression
-        if let imageData = compressImage(image, targetSizeKB: 20) { // Target only 20KB for image
-            let base64Image = imageData.base64EncodedString()
+        // Add image data as file (not base64) with compression
+        if let imageData = compressImage(image, targetSizeKB: 100) { // Increase target size for better quality
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"image\"\r\n\r\n".data(using: .utf8)!)
-            body.append(base64Image.data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"image\"; filename=\"image.jpg\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+            body.append(imageData)
             body.append("\r\n".data(using: .utf8)!)
         }
         
-        // Add audio data as file (server expects it in request.files)
+        // Add audio data as file (already in WAV format)
         do {
             let audioData = try Data(contentsOf: audioURL)
+            print("Audio file size: \(audioData.count) bytes")
+            
             // Compress audio data if it's too large
             let compressedAudioData = audioData.count > 100 * 1024 ? compressAudioData(audioData) : audioData
             
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"voice.m4a\"\r\n".data(using: .utf8)!)
-            body.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"voice.wav\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
             body.append(compressedAudioData)
             body.append("\r\n".data(using: .utf8)!)
+            
+            print("Audio added to request (no conversion needed)")
         } catch {
             DispatchQueue.main.async {
                 self.isLoading = false
-                self.errorMessage = "Failed to read audio file"
+                self.errorMessage = "Failed to read audio file: \(error.localizedDescription)"
             }
             throw NetworkError.encodingError
         }
-        
-        // Add additional metadata if needed
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"timestamp\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(Date().timeIntervalSince1970)".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
-        
-        // Add device info
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"device_info\"\r\n\r\n".data(using: .utf8)!)
-        body.append("iOS \(UIDevice.current.systemVersion)".data(using: .utf8)!)
-        body.append("\r\n".data(using: .utf8)!)
         
         // Close boundary
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
