@@ -11,7 +11,7 @@ import AVFoundation
 struct ContentView: View {
     @State private var showingBiometricCapture = false
     @State private var showingSuccessView = false
-    @State private var authResult: BiometricAuthResponse?
+    @State private var authResult: BiometricVerificationResponse?
     @State private var authMessage: String = ""
     
     var body: some View {
@@ -88,35 +88,31 @@ struct ContentView: View {
         }
     }
     
-    private func handleAuthenticationResult(_ result: BiometricAuthResponse) {
+    private func handleAuthenticationResult(_ result: BiometricVerificationResponse) {
         authResult = result
         
-        if result.success {
-            let welcomeMessage = if let name = result.name {
-                "✅ Authentication Successful!\nWelcome back, \(name)!"
-            } else {
-                "✅ Authentication Successful!\nWelcome back!"
-            }
-            authMessage = welcomeMessage
+        if result.success && result.result.verified {
+            let name = result.result.face.person.capitalized
+            authMessage = "✅ Authentication Successful!\nWelcome back, \(name)!"
             showingSuccessView = true
         } else {
-            let faceMatch = result.faceMatch ?? false
-            let voiceMatch = result.voiceMatch ?? false
+            let faceVerified = result.result.face.verified
+            let voiceVerified = result.result.voice.verified
+            let samePerson = result.result.match.samePerson
             
-            if faceMatch && !voiceMatch {
+            if faceVerified && voiceVerified && !samePerson {
+                authMessage = "❌ Authentication Failed\n\n✓ Face verified: \(result.result.face.person)\n✓ Voice verified: \(result.result.voice.person)\n✗ Identity mismatch\n\nFace and voice belong to different people."
+            } else if faceVerified && !voiceVerified {
                 authMessage = "❌ Authentication Failed\n\n✓ Face verified\n✗ Voice did not match\n\nTry again with clearer voice recording."
-            } else if !faceMatch && voiceMatch {
+            } else if !faceVerified && voiceVerified {
                 authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✓ Voice verified\n\nEnsure proper lighting and face positioning."
-            } else if !faceMatch && !voiceMatch {
-                authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✗ Voice did not match\n\nPlease try again."
             } else {
-                authMessage = "❌ Authentication Failed\n\n\(result.message)"
+                authMessage = "❌ Authentication Failed\n\n✗ Face did not match\n✗ Voice did not match\n\nPlease try again."
             }
             showingSuccessView = false
         }
     }
 }
-
 #Preview {
     ContentView()
 }

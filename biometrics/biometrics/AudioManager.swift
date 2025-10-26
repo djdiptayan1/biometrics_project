@@ -76,13 +76,13 @@ class AudioManager: NSObject, ObservableObject {
         }
         
         let settings = [
-            AVFormatIDKey: Int(kAudioFormatLinearPCM),  // WAV format
-            AVSampleRateKey: 16000,  // 16kHz as expected by the voice service
-            AVNumberOfChannelsKey: 1,  // Mono
-            AVLinearPCMBitDepthKey: 16,  // 16-bit depth
-            AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsFloatKey: false,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),  // Pure WAV format (uncompressed PCM)
+            AVSampleRateKey: 16000.0,  // 16kHz - optimized for SpeechBrain ECAPA-TDNN model
+            AVNumberOfChannelsKey: 1,  // Mono - required by the voice verification model
+            AVLinearPCMBitDepthKey: 16,  // 16-bit depth - standard quality
+            AVLinearPCMIsBigEndianKey: false,  // Little-endian byte order
+            AVLinearPCMIsFloatKey: false,  // Integer samples (not floating point)
+            AVEncoderAudioQualityKey: AVAudioQuality.max.rawValue  // Maximum quality, no compression
         ] as [String : Any]
         
         do {

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SuccessView: View {
     @Environment(\.presentationMode) var presentationMode
-    let authResult: BiometricAuthResponse
+    let authResult: BiometricVerificationResponse
     
     var body: some View {
         NavigationView {
@@ -17,61 +17,89 @@ struct SuccessView: View {
                 Spacer()
                 
                 // Success Icon
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: authResult.result.verified ? "checkmark.circle.fill" : "xmark.circle.fill")
                     .font(.system(size: 100))
-                    .foregroundColor(.green)
+                    .foregroundColor(authResult.result.verified ? .green : .red)
                 
-                Text("Authentication Successful!")
+                Text(authResult.result.verified ? "Authentication Successful!" : "Authentication Failed")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .multilineTextAlignment(.center)
                 
-                // Display user's name if available
-                if let name = authResult.name {
-                    Text("Welcome, \(name)!")
+                // Display user's name
+                if authResult.result.verified {
+                    Text("Welcome, \(authResult.result.face.person.capitalized)!")
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.blue)
                 }
                 
+                // Verification Details
                 VStack(spacing: 15) {
                     HStack {
                         Image(systemName: "faceid")
                             .foregroundColor(.blue)
                         Text("Face Recognition:")
                         Spacer()
-                        Text(authResult.faceMatch == true ? "✓ Verified" : "✗ Failed")
-                            .foregroundColor(authResult.faceMatch == true ? .green : .red)
+                        Text(authResult.result.face.verified ? "✓ Verified" : "✗ Failed")
+                            .foregroundColor(authResult.result.face.verified ? .green : .red)
                     }
+                    
+                    if authResult.result.face.verified {
+                        HStack {
+                            Spacer()
+                            Text("\(authResult.result.face.person.capitalized) - \(String(format: "%.1f%%", authResult.result.face.confidence * 100))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Divider()
                     
                     HStack {
                         Image(systemName: "mic.fill")
                             .foregroundColor(.blue)
                         Text("Voice Recognition:")
                         Spacer()
-                        Text(authResult.voiceMatch == true ? "✓ Verified" : "✗ Failed")
-                            .foregroundColor(authResult.voiceMatch == true ? .green : .red)
+                        Text(authResult.result.voice.verified ? "✓ Verified" : "✗ Failed")
+                            .foregroundColor(authResult.result.voice.verified ? .green : .red)
                     }
                     
-                    if let confidence = authResult.confidence {
+                    if authResult.result.voice.verified {
                         HStack {
-                            Image(systemName: "gauge")
-                                .foregroundColor(.blue)
-                            Text("Confidence:")
                             Spacer()
-                            Text("\(String(format: "%.1f", confidence * 100))%")
-                                .foregroundColor(.blue)
+                            Text("\(authResult.result.voice.person.capitalized) - \(String(format: "%.1f%%", authResult.result.voice.confidence * 100))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
+                    }
+                    
+                    Divider()
+                    
+                    HStack {
+                        Image(systemName: "person.2.fill")
+                            .foregroundColor(.blue)
+                        Text("Identity Match:")
+                        Spacer()
+                        Text(authResult.result.match.samePerson ? "✓ Same Person" : "✗ Mismatch")
+                            .foregroundColor(authResult.result.match.samePerson ? .green : .orange)
                     }
                 }
                 .padding()
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(15)
                 
-                Text("Welcome! You have been successfully authenticated.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                if authResult.result.verified {
+                    Text("You have been successfully authenticated with both face and voice verification.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Text("Authentication failed. Please try again.")
+                        .font(.body)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                }
                 
                 Spacer()
                 
@@ -83,29 +111,45 @@ struct SuccessView: View {
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(Color.blue)
+                        .background(authResult.result.verified ? Color.blue : Color.gray)
                         .cornerRadius(10)
                 }
                 .padding(.horizontal)
                 .padding(.bottom)
             }
             .padding()
-            .navigationTitle("Success")
+            .navigationTitle(authResult.result.verified ? "Success" : "Failed")
             .navigationBarHidden(true)
         }
     }
 }
 
-//#Preview {
-//    SuccessView(authResult: BiometricAuthResponse(
-//        success: true,
-//        message: "Authentication successful",
-//        name: "Diptayan Jash",
-//        confidence: 0.95,
-//        faceMatch: true,
-//        voiceMatch: true,
-//        face_similarity: 0.92,
-//        voice_similarity: 0.90,
-//        result: 1
-//    ))
-//}
+#Preview {
+    SuccessView(authResult: BiometricVerificationResponse(
+        success: true,
+        type: "biometric",
+        result: VerificationResult(
+            verified: true,
+            face: FaceVerification(
+                verified: true,
+                person: "diptayan",
+                confidence: 0.845,
+                threshold: 0.65,
+                similarities: ["diptayan": 0.845]
+            ),
+            voice: VoiceVerification(
+                verified: true,
+                person: "diptayan",
+                confidence: 0.998,
+                threshold: 0.41,
+                similarities: ["diptayan": 0.998, "palash": 0.205]
+            ),
+            match: MatchResult(
+                bothVerified: true,
+                samePerson: true,
+                facePerson: "diptayan",
+                voicePerson: "diptayan"
+            )
+        )
+    ))
+}

@@ -17,10 +17,21 @@ struct BiometricCaptureView: View {
     @State private var showingSuccessAlert = false
     @State private var showingAuthResult = false
     
-    let onAuthenticationComplete: (BiometricAuthResponse) -> Void
+    let onAuthenticationComplete: (BiometricVerificationResponse) -> Void
     
-    init(onAuthenticationComplete: @escaping (BiometricAuthResponse) -> Void = { _ in }) {
+    init(onAuthenticationComplete: @escaping (BiometricVerificationResponse) -> Void = { _ in }) {
         self.onAuthenticationComplete = onAuthenticationComplete
+    }
+    
+    // Computed property for button color
+    private var authenticateButtonColor: Color {
+        if networkManager.isLoading {
+            return .orange
+        } else if capturedImage != nil && audioManager.hasRecording {
+            return .blue
+        } else {
+            return .gray
+        }
     }
     
     var body: some View {
@@ -182,7 +193,13 @@ struct BiometricCaptureView: View {
                 Button(action: {
                     if let image = capturedImage, audioManager.hasRecording {
                         let audioURL = getDocumentsDirectory().appendingPathComponent("voice_recording.wav")
-                        networkManager.authenticateBiometricsAsync(image: image, audioURL: audioURL)
+                        Task {
+                            do {
+                                _ = try await networkManager.authenticateBiometrics(image: image, audioURL: audioURL)
+                            } catch {
+                                print("Authentication error: \(error)")
+                            }
+                        }
                     }
                 }) {
                     HStack {
@@ -199,11 +216,7 @@ struct BiometricCaptureView: View {
                     .foregroundColor(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(
-                        networkManager.isLoading ? Color.orange :
-                        (capturedImage != nil && audioManager.hasRecording) ? 
-                        Color.blue : Color.gray
-                    )
+                    .background(authenticateButtonColor)
                     .cornerRadius(10)
                 }
                 .disabled(capturedImage == nil || !audioManager.hasRecording || networkManager.isLoading)
@@ -221,13 +234,13 @@ struct BiometricCaptureView: View {
                 cameraManager.checkPermissions()
                 audioManager.checkPermissions()
             }
-            .onChange(of: networkManager.authResult) { result in
-                if result != nil {
+            .onChange(of: networkManager.authResult != nil) { hasResult in
+                if hasResult {
                     showingAuthResult = true
                 }
             }
             .onChange(of: networkManager.errorMessage) { error in
-                if error != nil {
+                if let _ = error {
                     showingAuthResult = true
                 }
             }
@@ -236,24 +249,14 @@ struct BiometricCaptureView: View {
                     if let result = networkManager.authResult {
                         onAuthenticationComplete(result)
                         presentationMode.wrappedValue.dismiss()
-                    } else if let error = networkManager.errorMessage {
-                        // Create a failed auth result for error cases
-                        let errorResult = BiometricAuthResponse(
-                            image: nil,
-                            audio: nil,
-                            result: AuthenticationResult(authenticated: false, name: nil),
-                            errors: ["general": AnyCodable(error)]
-                        )
-                        onAuthenticationComplete(errorResult)
-                        presentationMode.wrappedValue.dismiss()
                     }
                 }
             } message: {
                 if let result = networkManager.authResult {
-                    if result.success {
-                        Text("✅ Authentication Successful!\n\nFace Match: \(result.faceMatch == true ? "✓" : "✗")\nVoice Match: \(result.voiceMatch == true ? "✓" : "✗")\nConfidence: \(String(format: "%.1f", (result.confidence ?? 0) * 100))%")
+                    if result.success && result.result.verified {
+                        Text("✅ Authentication Successful!\n\nIdentity: \(result.result.face.person.capitalized)\nFace: \(String(format: "%.1f%%", result.result.face.confidence * 100))\nVoice: \(String(format: "%.1f%%", result.result.voice.confidence * 100))")
                     } else {
-                        Text("❌ Authentication Failed\n\n\(result.message)")
+                        Text("❌ Authentication Failed\n\nPlease try again.")
                     }
                 } else if let error = networkManager.errorMessage {
                     Text("❌ Error: \(error)")

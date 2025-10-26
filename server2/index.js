@@ -20,7 +20,7 @@ app.use('/audio', audioRoutes);
 const { authenticate } = require('./utils/authenticate');
 
 // Multimodal endpoint: accepts both image and audio
-app.post('/predict', upload.fields([
+app.post('/verify', upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'audio', maxCount: 1 }
 ]), async (req, res) => {

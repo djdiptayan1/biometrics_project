@@ -1,31 +1,36 @@
 import os
 
+# Base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-class Config:
-    """Base configuration class"""
+# Embedding paths
+EMBEDDING_DIR = os.path.join(BASE_DIR, "embedding")
+FACE_EMBEDDINGS = os.path.join(EMBEDDING_DIR, "auth_model.pth")
 
-    DEBUG = True
-    HOST = "0.0.0.0"
-    PORT = 3000
-    # Set maximum file upload size to 50MB (audio files can be large)
-    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
+VOICE_EMBEDDINGS = os.path.join(EMBEDDING_DIR, "audio_embeddings.pth")
 
+# Upload directory
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-class DevelopmentConfig(Config):
-    """Development configuration"""
+# Debug settings
+SAVE_UPLOADED_FILES = True  # Set to False in production to auto-delete files
+DEBUG_DIR = os.path.join(BASE_DIR, "debug_uploads")
+if SAVE_UPLOADED_FILES:
+    os.makedirs(DEBUG_DIR, exist_ok=True)
 
-    DEBUG = True
+# Verification thresholds
+FACE_THRESHOLD = 0.65
+VOICE_THRESHOLD = 0.012
 
+# Multimodal threshold (both face and voice must pass)
+MULTIMODAL_THRESHOLD = {"face": FACE_THRESHOLD, "voice": VOICE_THRESHOLD}
 
-class ProductionConfig(Config):
-    """Production configuration"""
+# Allowed file extensions
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg"}
+ALLOWED_AUDIO_EXTENSIONS = {"wav", "mp3"}
 
-    DEBUG = False
-
-
-# Configuration mapping
-config = {
-    "development": DevelopmentConfig,
-    "production": ProductionConfig,
-    "default": DevelopmentConfig,
-}
+# Server config
+HOST = "0.0.0.0"
+PORT = 3000
+DEBUG = True

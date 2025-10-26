@@ -1,15 +1,19 @@
-Flask==2.3.3
+Flask==3.0.0
 Flask-CORS==4.0.0
-pydantic==2.3.0
-numpy>=1.21.0,<2.0.0
-h5py>=3.1.0
-tensorflow>=2.10.0,<2.16.0
-mtcnn>=0.1.1
+numpy==1.26.4
+Pillow==10.1.0
+torch==2.1.2
+torchaudio==2.1.2
+librosa==0.10.1
+scipy==1.11.4
+soundfile==0.12.1
+requests==2.31.0
+
+# Speaker verification
 speechbrain
-torch
-sounddevice
-opencv-python>=4.5.0
-Pillow>=8.0.0
-scikit-learn>=1.0.0
-librosa>=0.8.0
-waitress>=2.1.0
+
+# Audio helpers
+pydub
+
+# Optional: facenet helper if you use it elsewhere
+keras-facenet==0.3.2
